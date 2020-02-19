@@ -24,9 +24,18 @@ _Amy Voop, Brian C. Wândels, Dimitrii Xorxy_
 
 >Xorxy D[au] AND ("Bronson A"[au] OR "Elephant CD"[au] OR "Horton FG"[au])
 
-## Notes
+## Notes and features
 
 - The JavaScript code is included in the HTML file, so that the end user can save a local copy of a single file and use it with ease.
 - Non-letter characters (like superscript numbers, which are often used to indicate affiliation) are stripped away.
 - Common titles, eg. Dr or Prof, and also some suffixes, eg. Jnr, are trimmed away, since they are not relevant for the search.
-- This tool is not supported or endorsed by PubMed or NCBI. It is only intended for a real human (not a bot) to use to run reasonable amounts of search queries.
+
+## Missing features and bugs
+
+- Reviewer search strings don't yet extract initials
+- Ability to choose whether to use all initials or just first not yet complete
+- Surnames with spaces not yet taken into account, eg. "van der X", "von Y", "de la Z"
+
+## Disclaimer
+
+This tool is not supported or endorsed by PubMed or NCBI. It is only intended for a real human (not a bot) to use to run reasonable amounts of search queries.

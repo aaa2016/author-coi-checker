@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!--
+	Released under GNU General Public License v3
+-->
 <html lang="en-GB">
   <head>
     <title id="pageTitle">Author COI checker</title> <!--Default title-->
@@ -9,67 +12,114 @@
 
 <script>
 //"use strict";
-var scriptVersion = "v0.1_indev"; // Update version as required
+
+var scriptVersion = "v0.3_indev"; // Update version as required
 var scriptName = "String Generator (" + scriptVersion + ")";
+
+// Messages and other global variables
 var successMessage = "A string has been generated";
 var successRevsMessage = "A string has been generated, together with reviewer link(s)";
 var noAuthorsError = "No author list was provided";
-
+var reviewerName = "Reviewer N"; // Generic reviewer name, as default
 
 /**
-/
-/ generateString() is the master function that is run when the user initiates the process
-/ 
+*
+* generateString() is the master function that is run when the user clicks the button
+* 
 */
 function generateString() { // Runs from "Generate string" button
 
     resetEverything(); // Clear output, error and message fields
-    document.forms["mainForm"].outputField.value = ""
 
-    if (document.forms["mainForm"].inputAuthors.value == "") { // Test for no author list
+	// Test for no author list
+    if (document.forms["mainForm"].inputAuthors.value == "") { 
 
-        document.getElementById("errorField").innerHTML = noAuthorsError; // Print error
+		// Print error
+        document.getElementById("errorField").innerHTML = noAuthorsError; 
 
     } else { // When an author list has been provided
-
-        document.getElementById("errorField").innerHTML = "" // Reset error field
         
         //TODO: this needs to be restructured        
+        // Get input
         var inputString = document.forms["mainForm"].inputAuthors.value;
-        var sanitisedString = sanitiseInput(inputString); // Trim irrelevant characters
-        var sanitisedString = extractNames(sanitisedString); // Extract names
-        var outputString = prepareString(sanitisedString); // Splits up names with "OR"
         
-        var reviewerName = "Reviewer N"; // Generic reviewer name, as default
-        var genericOutputString = reviewerName + "[au] AND (" + outputString + "\")" // Add generic reviewer name
+        // Trim irrelevant characters
+        var sanitisedString = sanitiseInput(inputString);
         
+        // Extract names 
+        var sanitisedNameArray = extractNames(sanitisedString); 
+        
+        // Splits up names with "OR"
+        var outputString = prepareString(sanitisedNameArray); 
+                
+        // Add generic reviewer name
+        var genericOutputString = reviewerName + "[au] AND (" + outputString + "\"[au])" 
+        
+        // Print output
         document.forms["mainForm"].outputField.value = genericOutputString;
 
-        var genericOutputURL = convertToURL(genericOutputString); // Convert to URL (replacing spaces)
-        document.getElementById("genericLink").innerHTML =
+		// Convert to URL (replacing spaces)
+        var genericOutputURL = convertToURL(genericOutputString); 
+
+		// Test for no reviewers
+        if (document.forms["mainForm"].inputReviewers.value != "") { 
+        
+			// Get reviewer input
+            var inputReviewerString = document.forms["mainForm"].inputReviewers.value;
+            
+            // Trim irrelevant characters
+            var sanitisedReviewerString = sanitiseInput(inputReviewerString); 
+            
+            // Extract reviewer names
+            var outputReviewerArray = extractNames(sanitisedReviewerString); 
+            
+            //window.alert("outputReviewerArray = "+outputReviewerArray);
+            
+            // TODO: Reviewer initial extraction
+            // Cycle through each reviewer name (outer array)
+            for (i=0; i<outputReviewerArray.length; i++){
+            
+            	// TODO: Cycle through reviewer first names (inner array)
+            	for (j=0; j<outputReviewerArray[i].length; j++) {
+            	
+            	} // j loop
+            	
+					// Generate output
+					var outputReviewerString = "\""+outputReviewerArray[i][0]+"\""+ 
+						"[au] AND ("+ outputString + "\"[au])";
+				
+            		// Convert to URL (replacing spaces)
+            		var outputReviewerURL = convertToURL(outputReviewerString); 
+				
+					// Generate p and link elements to display
+					var p = document.createElement("p");
+					var revLink = document.createElement("a");
+					var linkText = document.createTextNode("Run search with: " 
+						+outputReviewerArray[i][0]);
+					revLink.setAttribute("href",outputReviewerURL);
+					revLink.setAttribute("target","_blank");
+					revLink.appendChild(linkText);
+					p.appendChild(revLink);
+		
+					var revLinks = document.getElementById("reviewerLink");
+					revLinks.appendChild(p); 
+				
+                
+            } // i loop
+            
+            // Print reviewer message
+            document.getElementById("messageField").innerHTML = successRevsMessage; 
+
+        } else {
+        
+        	// Print generic URL
+        	document.getElementById("genericLink").innerHTML =
             "<a href='" + genericOutputURL + "'>Generic PubMed link</a>";
         
-        document.getElementById("messageField").innerHTML = successMessage; // Print message
-
-        if (document.forms["mainForm"].inputReviewers.value == "") { // Test for no reviewers
-
-            // Do nothing (do not generate links per reviewer, also no errors)
-
-        } else { // When reviewer names have been provided
+        	// Print message
+        	document.getElementById("messageField").innerHTML = successMessage; 
         
-        //TODO: Full reviewer name extraction and link generation
-
-            var inputReviewerString = document.forms["mainForm"].inputReviewers.value;
-            var sanitisedReviewerString = sanitiseInput(inputReviewerString) // Trim irrelevant characters
-            var outputReviewerString = extractNames(sanitisedReviewerString) // Extract names
-            var outputReviewerURL = convertToURL(outputReviewerString);  // Convert to URL (replacing spaces)
-            document.getElementById("reviewerLink").innerHTML =
-            "Reviewer URL(s):<br><a href='" + outputReviewerURL +
-                "'>PubMed link for " + outputReviewerString + "\"</a>";
-            
-            document.getElementById("messageField").innerHTML = successRevsMessage; // Print message
-
-        } // End test for no reviewer(s)
+        }// End test for no reviewer(s)
 
     } // End test for no input
 	
@@ -77,47 +127,66 @@ function generateString() { // Runs from "Generate string" button
 
 //////////////////////////////////////////////////////////////////
 
-function sanitiseInput(input) { // Sanitise input string
+/**
+*	
+*	Removes extraneous characters and messy formatting/punctuation
+*	Also removes certain prefixes and suffixes that are not part of names
+*
+*/
+function sanitiseInput(input) {
 
 	// note: commas, spaces, hyphens, apostrophes, and any letter characters must remain
-	// hyphens and apostrophes also remain as they can be in names, eg. Anne-Marie O'Connor
+	// hyphens and apostrophes remain as they can be in names, eg. Anne-Marie O'Connor
 	
-    input = input.replace(/[0-9`~!@#$%^&*_|+\=?;:"<>.]/g,""); // Remove unneeded numbers and symbols
-    input = input.replace(/,+/g,","); // Replace multiple commas with singles
-    input = input.replace(/,$/,""); // Remove terminal comma (if present)
-    //input = input.replace(/\n\f\r\t\v/g,","); // TODO: Replace return characters with commas (for reviewer list)
+	// Remove unneeded numbers and symbols
+    var output = input.replace(/[0-9`~!@#$%^&*_|+\=?;:"<>.]/g,"");
     
+    // Replace multiple commas with singles 
+    output = output.replace(/,+/g,","); 
+    
+    // Remove terminal comma (if present)
+    output = output.replace(/,$/,""); 
+    
+    // TODO: Replace return characters with commas (for reviewer list)
+    //input = input.replace(/\n\f\r\t\v/g,","); 
+    
+    // Remove prefixes, titles, and suffixes
     var toRemove = ["Dr ", "Mr ", "Prof ", "Mrs ", "Miss ", "Ms ", " Jnr", " Jr", 
-	" Snr", " III", " II", "Sir ", "Lady ", " PhD", " MD"];
-	var surnamePrefixes = ["von", "van der", "de la"]; //TODO: Add replacement step, incomplete list, case insensitivity
-	
-    var i;
+	" Snr", " III", " II", "Sir ", "Lady ", " PhD", " MD"]; 
     for (i = 0; i< toRemove.length; i++) {
-    	input = input.replace(toRemove[i],"");
+    	output = output.replace(toRemove[i],"");
     };
     
-    return input;
+    // TODO: Add replacement step, incomplete list, case insensitivity
+    var surnamePrefixes = ["von", "van der", "de la"]; 
+	    
+    return output;
 
 } // End of sanitiseInput()
 
 //////////////////////////////////////////////////////////////////
 
 /**
-/   input (string): "Firstname Surname, Firstname Middlename Surname, (etc)"
-/	output (array of strings): ["Firstname Surname","Firstname Middlename Surname",(etc.)]
+*   input (string): "Firstname Surname, Firstname Middlename Surname, (etc)"
+*	output (array of strings): ["Firstname Surname","Firstname Middlename Surname",(etc.)]
 */
 
 function extractNames(input) { // Extracts names
     
     var fullNames = [];
     
-    while (input.indexOf(",") > -1) { // Check for presence of commas
+    // Check for presence of commas, cycle through until no more commas
+    while (input.indexOf(",") > -1) { 
    		//window.alert("Commas found at: " + input.indexOf(","));
     	//window.alert("Name: " + input.substring(0,input.indexOf(",")));
-    	fullNames.push(input.substring(0,input.indexOf(","))); // Extract name to array
-    	input = input.substring(input.indexOf(",") + 1) // Trim up to character after comma
+    	// Extract name to array
+    	fullNames.push(input.substring(0,input.indexOf(","))); 
+    	// Trim string up to character after comma for next cycle
+    	input = input.substring(input.indexOf(",") + 1) 
     };
-    fullNames.push(input); // Add what remains as final name (or only name, if no commas)
+    
+    // Add what remains as final name (or only name, if no commas)
+    fullNames.push(input); 
     
     //TODO: extract first names and surname from each full name
     
@@ -126,18 +195,65 @@ function extractNames(input) { // Extracts names
 
     //window.alert("fullNames.length = " + fullNames.length)
     //window.alert("fullNames = " + fullNames)
-    for (i = 0; i < fullNames.length; i++) { // For every full name in the array
+    
+    // For every full name in the array
+    for (i = 0; i < fullNames.length; i++) { 
     	extractedNames[i] = extractFirstNames(fullNames[i]);
     	//window.alert("i is " + i);
     };
     
+    //window.alert("extractedNames = " + extractedNames);
     return extractedNames;
-    //return fullNames;
 		
 } // End of extractNames()
 
 //////////////////////////////////////////////////////////////////
 
+/**
+*   input (array): ["Firstname Surname","Firstname Middlename Surname",(etc.)]
+*	output (array of arrays): [[Surname, Firstname],[Surname, Firstname, Middlename],(etc.)]
+*/
+function extractFirstNames(input) { // Extracts first names + surname from full name
+	
+	//TODO: add option to extract all first initials, or just first initial (radio button)
+	
+	var splitNames = [];
+    
+    // Check for presence of spaces
+    if (input.indexOf(" ") > -1) { 
+   		//window.alert("Space found at: " + input.lastIndexOf(" "));
+    	//window.alert("Surname: " + input.substring(input.lastIndexOf(" ")));
+    	
+    	// Extract surname to array (between last space and end of string)
+    	splitNames.push(input.substring(input.lastIndexOf(" ")+1)); 
+    	// Trim up to character before space
+    	input = input.slice(0,input.lastIndexOf(" ")) 
+    };
+    
+    // Check for presence of spaces separating first names
+    while (input.indexOf(" ") > -1) { 
+   		//window.alert("Commas found at: " + input.indexOf(","));
+    	//window.alert("Name: " + input.substring(0,input.indexOf(",")));
+    	
+    	// Extract first names to array
+    	splitNames.push(input.substring(0,input.indexOf(" "))); 
+    	// Trim up to character after space
+    	input = input.substring(input.indexOf(" ") + 1) 
+    };
+    
+    // Add what remains as first name (or only first name, if no spaces)
+    splitNames.push(input); 
+
+	return splitNames;
+
+} // End of extractFirstNames()
+
+//////////////////////////////////////////////////////////////////
+
+/**
+*	Prepares names in Boolean search format for the search engine
+*	Authors in PubMed are searched using [au]
+*/
 function prepareString(input) {
 
 	//window.alert("prepareString input is " + input);
@@ -170,38 +286,7 @@ function prepareString(input) {
 //////////////////////////////////////////////////////////////////
 
 /**
-/   input (array): ["Firstname Surname","Firstname Middlename Surname",(etc.)]
-/	output (array of arrays): [[Surname, Firstname],[Surname, Firstname, Middlename],(etc.)]
-*/
-function extractFirstNames(input) { // Extracts first names + surname from full name
-	
-	//TODO: add option to extract all first initials, or just first initial (radio button)
-	
-	var splitNames = [];
-    
-    if (input.indexOf(" ") > -1) { // Check for presence of spaces
-   		//window.alert("Space found at: " + input.lastIndexOf(" "));
-    	//window.alert("Surname: " + input.substring(input.lastIndexOf(" ")));
-    	splitNames.push(input.substring(input.lastIndexOf(" ")+1)); // Extract surname to array
-    	input = input.slice(0,input.lastIndexOf(" ")) // Trim up to character before space
-    };
-    
-    while (input.indexOf(" ") > -1) { // Check for presence of spaces
-   		//window.alert("Commas found at: " + input.indexOf(","));
-    	//window.alert("Name: " + input.substring(0,input.indexOf(",")));
-    	splitNames.push(input.substring(0,input.indexOf(" "))); // Extract first names to array
-    	input = input.substring(input.indexOf(" ") + 1) // Trim up to character after space
-    };
-    splitNames.push(input); // Add what remains as first name (or only first name, if no spaces)
-
-	return splitNames;
-
-} // End of extractFirstNames()
-
-//////////////////////////////////////////////////////////////////
-
-/**
-/	Adds your search string to the PubMed search URL
+*	Adds your search string to the PubMed search URL
 */
 function convertToURL(input) {
 
@@ -213,7 +298,10 @@ function convertToURL(input) {
 
 //////////////////////////////////////////////////////////////////
 
-function resetEverything() { // Runs from Reset button
+/**
+*	Runs from Reset button
+*/
+function resetEverything() {
 
     // Note: Reset button already clears the form fields, even without scripts
 
@@ -221,23 +309,30 @@ function resetEverything() { // Runs from Reset button
     document.getElementById("messageField").innerHTML = "";
     document.getElementById("genericLink").innerHTML = "";
     document.getElementById("reviewerLink").innerHTML = "";
+    document.forms["mainForm"].outputField.value = ""
 
-} //End of resetEverything()
+} // End of resetEverything()
 
 //////////////////////////////////////////////////////////////////
 
-function tryExample() { // Runs from "Try an example" button; not real names!
+/**
+*	Runs from "Try an example" button
+*	Note: not real names!
+*/
+function tryExample() {
 
-    /*var exampleAuthors = "Alan (Al) Bronson1, Lady Carina D. Elephant2, " +
-        "Sir Felix Gerald Horton Jr.3, I. Julia de Köy4,5, Liam McNügget MD.6, " +
-        "Neil O’Reilley III6,7, Prof. Pedro Quesadilla-Rodríguez8, " +
-        "Susan-Tracey van der Umlar PhD9,10,11*";*/
+    //var exampleAuthors = "Alan (Al) Bronson1, Lady Carina D. Elephant2, " +
+    //    "Sir Felix Gerald Horton Jr.3, I. Julia de Köy4,5, Liam McNügget MD.6, " +
+    //    "Neil O’Reilley III6,7, Prof. Pedro Quesadilla-Rodríguez8, " +
+    //    "Susan-Tracey van der Umlar PhD9,10,11*";
     var exampleAuthors = "Alan Bronson1, Carina D. Elephant2, " +
         "Felix Gerald Horton3";
-    /*var exampleReviewers = "Amy Voop\rBrian C. Wândels\rDimitrii Xorxy\r" + 
-        "Evelyn F. G. Yamma-Yamma\rHelga de Zauber";*/
-    var exampleReviewers = "Amy Voop, Brian C. Wândels, Dimitrii Xorxy, " + 
-        "Evelyn F. G. Yamma-Yamma, Helga de Zauber";
+        
+    //var exampleReviewers = "Amy Voop\rBrian C. Wândels\rDimitrii Xorxy\r" + 
+    //    "Evelyn F. G. Yamma-Yamma\rHelga de Zauber";
+    var exampleReviewers = "Amy Voop, Brian C. Wândels, Dimitrii Xorxy";
+    
+    // Insert example strings
     document.forms["mainForm"].inputAuthors.value = exampleAuthors;
     document.forms["mainForm"].inputReviewers.value = exampleReviewers;
 
@@ -247,27 +342,44 @@ function tryExample() { // Runs from "Try an example" button; not real names!
 
 </script>
 
-<!--Define content styles-->
+<!--Content styles-->
 <!--TODO: the page needs beautification once scripts are working well-->
 <style>
 body {font-family: sans-serif}
 h1, h2, h3, noscript, form {text-align: center}
-textarea {width: 95%}
+a {text-decoration: none;}
+textarea {
+	width: 95%;
+	border: 2px solid black;
+	border-radius: 4px;
+	}
 table {border-collapse: collapse}
 /* table, td, th {border: 1px solid black} */
 p.error, noscript {color: red}
 p.message {color: green}
 /* p.URL {text-align: left} */
+.button {
+  background-color: black;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  /*font-size: 16px;*/
+}
+
 </style>
 
   </head>
 
   <body>
 
-<h1 id="mainHeading">String Generator</h1> <!--Default heading-->
+<h1 id="mainHeading">String Generator</h1>
 <script>
-document.getElementById("mainHeading").innerHTML = scriptName; // Prints version as heading
-document.getElementById("pageTitle").innerHTML = scriptName; // Prints version as page title
+// Prints version as heading and page title
+document.getElementById("mainHeading").innerHTML = scriptName; 
+document.getElementById("pageTitle").innerHTML = scriptName;
 </script>
 
 <form action="" name="mainForm">
@@ -275,40 +387,42 @@ document.getElementById("pageTitle").innerHTML = scriptName; // Prints version a
 <table style="width:95%">
   <tr>
     <td style="width:20%">Author List</td>
-    <td><textarea rows="7" name="inputAuthors"></textarea></td>
+    <td><textarea rows="6" name="inputAuthors"></textarea></td>
   </tr>
   <tr>
     <td style="width:20%">Reviewer List (Optional)</td>
-    <td><textarea rows="7" name="inputReviewers"></textarea></td>
+    <td><textarea rows="6" name="inputReviewers"></textarea></td>
   </tr>
 <table>
 
-<p> <!--Option to choose which initials to use-->
-  <input type="radio" name="initials" value="allinitials" checked>Use all initials <!--Default-->
+<!-- TODO: Feature not yet coded
+<p>
+	
+  <input type="radio" name="initials" value="allinitials" checked>Use all initials
   <input type="radio" name="initials" value="firstinitial"> Use first initial only
-</p>
+</p>-->
 
 <p> <!--Form buttons-->
-  <input type=button value="Generate string" onClick="generateString()" />
-  <input type=button value="Try an example" onClick="tryExample()" />
-  <input type=reset value="Reset form" onClick="resetEverything()"/>
+  <input type=button class="button" value="Generate string" onClick="generateString()" />
+  <input type=button class="button" value="Try an example" onClick="tryExample()" />
+  <input type=reset class="button" value="Reset form" onClick="resetEverything()"/>
 </p>
 
 <noscript>Please enable Javascript to use this generator</noscript>
-<p id="messageField" class="message"><!--Start with blank message field--></p>
-<p id="errorField" class="error"><!--Start with blank error field--></p>
+<p id="messageField" class="message"><!--Start blank--></p>
+<p id="errorField" class="error"><!--Start blank--></p>
 
-<hr> <!--Horizontal line between inputs and outputs-->
+<hr>
 
 <table style="width:95%">
   <tr>
     <td style="width:20%">Generic Search String</td>
-    <td><textarea rows="7" name="outputField"></textarea></td>
+    <td><textarea rows="3" name="outputField"></textarea><!--Start blank--></td>
   </tr>
 <table>
 
-<p id="genericLink" class="URL"><!--Start with blank URL field--></p>
-<p id="reviewerLink" class="URL"><!--Start with blank URL field--></p>
+<p id="genericLink" class="URL"><!--Start blank--></p>
+<p id="reviewerLink" class="URL"><!--Start blank--></p>
 
 </form>
 
