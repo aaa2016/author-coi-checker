@@ -20,7 +20,7 @@ var scriptName = "String Generator (" + scriptVersion + ")";
 var successMessage = "A string has been generated";
 var successRevsMessage = "A string has been generated, together with reviewer link(s)";
 var noAuthorsError = "No author list was provided";
-var reviewerName = "Reviewer N"; // Generic reviewer name, as default
+var reviewerName = "reviewer n"; // Generic reviewer name, as default
 
 /**
 *
@@ -51,6 +51,9 @@ function generateString() { // Runs from "Generate string" button
         
         // Splits up names with "OR"
         var outputString = prepareString(sanitisedNameArray); 
+        
+        // Remove hashes from surname prefixes that had it added by sanitiseString()
+        var outputString = removeHashes(outputString); 
                 
         // Add generic reviewer name
         var genericOutputString = reviewerName + "[au] AND (" + outputString + "\"[au])" 
@@ -66,27 +69,35 @@ function generateString() { // Runs from "Generate string" button
         
 			// Get reviewer input
             var inputReviewerString = document.forms["mainForm"].inputReviewers.value;
+                     
+            // Replace returns with commas (if list provided in that format)
+            var sanitisedReviewerString = addCommas(inputReviewerString); 
             
             // Trim irrelevant characters
-            var sanitisedReviewerString = sanitiseInput(inputReviewerString); 
+            sanitisedReviewerString = sanitiseInput(sanitisedReviewerString); 
             
             // Extract reviewer names
-            var outputReviewerArray = extractNames(sanitisedReviewerString); 
+            var outputReviewerArray = extractNames(sanitisedReviewerString);
             
             //window.alert("outputReviewerArray = "+outputReviewerArray);
             
             // TODO: Reviewer initial extraction
             // Cycle through each reviewer name (outer array)
             for (i=0; i<outputReviewerArray.length; i++){
-            
-            	// TODO: Cycle through reviewer first names (inner array)
-            	for (j=0; j<outputReviewerArray[i].length; j++) {
-            	
-            	} // j loop
+            		
+            		// Prepare reviewer name in search format
+            		if (outputReviewerArray[i] != "") {
+            			var revQuery = outputReviewerArray[i][0]+" "
+            				+outputReviewerArray[i][1][0];
+            		}
             	
 					// Generate output
-					var outputReviewerString = "\""+outputReviewerArray[i][0]+"\""+ 
+					var outputReviewerString = "\""+revQuery+"\""+ 
 						"[au] AND ("+ outputString + "\"[au])";
+						
+					// Remove hashes from surname prefixes added by sanitiseString()
+        			var outputReviewerString = removeHashes(outputReviewerString);
+        			revQuery = removeHashes(revQuery); 
 				
             		// Convert to URL (replacing spaces)
             		var outputReviewerURL = convertToURL(outputReviewerString); 
@@ -95,7 +106,7 @@ function generateString() { // Runs from "Generate string" button
 					var p = document.createElement("p");
 					var revLink = document.createElement("a");
 					var linkText = document.createTextNode("Run search with: " 
-						+outputReviewerArray[i][0]);
+						+revQuery);
 					revLink.setAttribute("href",outputReviewerURL);
 					revLink.setAttribute("target","_blank");
 					revLink.appendChild(linkText);
@@ -114,7 +125,7 @@ function generateString() { // Runs from "Generate string" button
         
         	// Print generic URL
         	document.getElementById("genericLink").innerHTML =
-            "<a href='" + genericOutputURL + "'>Generic PubMed link</a>";
+            "<a href='" + genericOutputURL + "'>Generic search link</a>";
         
         	// Print message
         	document.getElementById("messageField").innerHTML = successMessage; 
@@ -147,22 +158,70 @@ function sanitiseInput(input) {
     // Remove terminal comma (if present)
     output = output.replace(/,$/,""); 
     
-    // TODO: Replace return characters with commas (for reviewer list)
-    //input = input.replace(/\n\f\r\t\v/g,","); 
+    // Replace return characters with spaces
+	output = output.replace(/[\n\r]+/g," "); 	
+	
+	// Change to lower case
+	output = output.toLowerCase();
     
     // Remove prefixes, titles, and suffixes
-    var toRemove = ["Dr ", "Mr ", "Prof ", "Mrs ", "Miss ", "Ms ", " Jnr", " Jr", 
-	" Snr", " III", " II", "Sir ", "Lady ", " PhD", " MD"]; 
+    var toRemove = ["dr ", "mr ", "prof ", "mrs ", "miss ", "ms ", " jnr", " jr", 
+	" snr", " iii", " ii", "sir ", "lady ", " phd", " md"]; 
     for (i = 0; i< toRemove.length; i++) {
     	output = output.replace(toRemove[i],"");
-    };
+    }
     
-    // TODO: Add replacement step, incomplete list, case insensitivity
-    var surnamePrefixes = ["von", "van der", "de la"]; 
+    // Replace spaces with # between surname prefixes and surnames
+    // TODO: incomplete list, case insensitivity
+    var surnamePrefixes = ["von", "von der", "van der", "de", "de la", "de le"]; 
+    for (i = 0; i< surnamePrefixes.length; i++) {
+    
+    	// Check if name contains prefix with space after it
+    	if (output.indexOf(surnamePrefixes[i]+" ")>-1) {
+    		//window.alert("Prefix found: "+surnamePrefixes[i]);
+    		
+    		// Amend prefix to include # instead of any spaces
+    		var amendedPrefix = surnamePrefixes[i].slice(0,(surnamePrefixes[i].length));
+    		amendedPrefix = amendedPrefix.replace(/[\s]+/g,"#");
+    		amendedPrefix += "#"; // for final space
+    		//window.alert("Amended prefix: "+amendedPrefix);
+    		
+    		// Replace with amended prefix
+    		output = output.replace((surnamePrefixes[i]+" "),amendedPrefix);
+    	}
+    }
 	    
     return output;
 
 } // End of sanitiseInput()
+
+//////////////////////////////////////////////////////////////////
+
+/**
+*	
+*	Replaces line breaks with commas (for reviewer list)
+*
+*/
+function addCommas(input) {
+	
+	// Replace line breaks with commas
+    return input.replace(/[\n\r]+/g,","); 	
+
+} // End of addCommas()
+
+//////////////////////////////////////////////////////////////////
+
+/**
+*	
+*	Replaces # with spaces (for cleaning up surname prefixes after processing)
+*
+*/
+function removeHashes(input) {
+	
+	// Replace line breaks with commas
+    return input.replace(/[#]+/g," "); 	
+
+} // End of removeHashes()
 
 //////////////////////////////////////////////////////////////////
 
@@ -321,22 +380,43 @@ function resetEverything() {
 */
 function tryExample() {
 
-    //var exampleAuthors = "Alan (Al) Bronson1, Lady Carina D. Elephant2, " +
-    //    "Sir Felix Gerald Horton Jr.3, I. Julia de Köy4,5, Liam McNügget MD.6, " +
-    //    "Neil O’Reilley III6,7, Prof. Pedro Quesadilla-Rodríguez8, " +
-    //    "Susan-Tracey van der Umlar PhD9,10,11*";
-    var exampleAuthors = "Alan Bronson1, Carina D. Elephant2, " +
-        "Felix Gerald Horton3";
+    var exampleAuthors = "Alan Bronson1, Lady Carina D. Elephant2, " +
+        "Sir Felix Gerald Horton Jr.3, I. Julia de Köy4,5, Liam McNügget MD.6, " +
+        "Neil O’Reilley III6,7, Prof. Pedro Quesadilla-Rodríguez8, " +
+        "Susan-Tracey van der Umlar PhD9,10,11*";
+    //var exampleAuthors = "Alan Bronson1, Carina D. Elephant2, " +
+    //    "Felix Gerald Horton3";
         
-    //var exampleReviewers = "Amy Voop\rBrian C. Wândels\rDimitrii Xorxy\r" + 
-    //    "Evelyn F. G. Yamma-Yamma\rHelga de Zauber";
-    var exampleReviewers = "Amy Voop, Brian C. Wândels, Dimitrii Xorxy";
+    var exampleReviewers = "Amy Voop\rBrian C. Wândels\rDimitrii Xorxy\r" + 
+        "Evelyn F. G. Yamma-Yamma\rHelga de Zauber";
+    //var exampleReviewers = "Amy Voop, Brian C. Wândels, Dimitrii Xorxy";
     
     // Insert example strings
     document.forms["mainForm"].inputAuthors.value = exampleAuthors;
     document.forms["mainForm"].inputReviewers.value = exampleReviewers;
 
 } // End of tryExample()
+
+//////////////////////////////////////////////////////////////////
+
+/**
+*	Collapsible section - TODO: not working!
+*	Taken from: https://www.w3schools.com/howto/howto_js_collapsible.asp
+*/
+var coll = document.getElementsByClassName("collapsible");
+var i;
+
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+} 
 
 //////////////////////////////////////////////////////////////////
 
@@ -366,8 +446,34 @@ p.message {color: green}
   text-align: center;
   text-decoration: none;
   display: inline-block;
+  cursor: pointer;
   /*font-size: 16px;*/
 }
+ /* Style the button that is used to open and close the collapsible content */
+.collapsible {
+  background-color: black;
+  color: white;
+  cursor: pointer;
+  padding: 5px 10px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  /*font-size: 15px;*/
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.active, .collapsible:hover, .button:hover {
+  background-color: #ccc;
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.content {
+  padding: 0 18px;
+  display: none;
+  overflow: hidden;
+  background-color: #f1f1f1;
+} 
 
 </style>
 
@@ -395,20 +501,21 @@ document.getElementById("pageTitle").innerHTML = scriptName;
   </tr>
 <table>
 
-<!-- TODO: Feature not yet coded
-<p>
-	
-  <input type="radio" name="initials" value="allinitials" checked>Use all initials
-  <input type="radio" name="initials" value="firstinitial"> Use first initial only
-</p>-->
-
 <p> <!--Form buttons-->
   <input type=button class="button" value="Generate string" onClick="generateString()" />
   <input type=button class="button" value="Try an example" onClick="tryExample()" />
   <input type=reset class="button" value="Reset form" onClick="resetEverything()"/>
 </p>
+<!-- TODO: Collapsible settings pane (does not work currently)
+<button type="button" class="collapsible">Settings</button>
+<div class="content">
+	<p>
+	  <input type="radio" name="initials" value="allinitials" checked>Use all initials
+	  <input type="radio" name="initials" value="firstinitial"> Use first initial only
+	</p>
+</div>-->
 
-<noscript>Please enable Javascript to use this generator</noscript>
+<noscript><p>Please enable Javascript to use this generator</p></noscript>
 <p id="messageField" class="message"><!--Start blank--></p>
 <p id="errorField" class="error"><!--Start blank--></p>
 

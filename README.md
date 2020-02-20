@@ -16,6 +16,12 @@ If the user additionally provides a list of reviewer candidates, a link will be 
 
 _Amy Voop, Brian C. Wândels, Dimitrii Xorxy_
 
+...or...
+
+_Amy Voop_
+_Brian C. Wândels_
+_Dimitrii Xorxy_
+
 ...will generate the following links:
 
 >Voop A[au] AND ("Bronson A"[au] OR "Elephant CD"[au] OR "Horton FG"[au])
@@ -29,13 +35,17 @@ _Amy Voop, Brian C. Wândels, Dimitrii Xorxy_
 - The JavaScript code is included in the HTML file, so that the end user can save a local copy of a single file and use it with ease.
 - Non-letter characters (like superscript numbers, which are often used to indicate affiliation) are stripped away.
 - Common titles, eg. Dr or Prof, and also some suffixes, eg. Jnr, are trimmed away, since they are not relevant for the search.
+- List of reviewers can be comma separated (,) or carriage return separated (each on a new line)
+- Some surnames with spaces are taken into account, eg. "van der X", "von Y", "de la Z"
 
 ## Missing features and bugs
 
-- Reviewer search strings don't yet extract initials
 - Ability to choose whether to use all initials or just first not yet complete
-- Surnames with spaces not yet taken into account, eg. "van der X", "von Y", "de la Z"
+- Searches in other portals, eg. Google Scholar
+- Option to use whole first name rather than initials
 
 ## Disclaimer
 
 This tool is not supported or endorsed by PubMed or NCBI. It is only intended for a real human (not a bot) to use to run reasonable amounts of search queries.
+
+ ![Screenshot of tool](https://github.com/aaa2016/author-coi-checker/blob/master/screenshot.png)
