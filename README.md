@@ -26,11 +26,11 @@ _Dimitrii Xorxy_
 
 ...will generate the following links:
 
->Voop A[au] AND ("Bronson A"[au] OR "Elephant CD"[au] OR "Horton FG"[au])
+>"Voop A"[au] AND ("Bronson A"[au] OR "Elephant CD"[au] OR "Horton FG"[au])
 
->Wândels BC[au] AND ("Bronson A"[au] OR "Elephant CD"[au] OR "Horton FG"[au])
+>"Wândels BC"[au] AND ("Bronson A"[au] OR "Elephant CD"[au] OR "Horton FG"[au])
 
->Xorxy D[au] AND ("Bronson A"[au] OR "Elephant CD"[au] OR "Horton FG"[au])
+>"Xorxy D"[au] AND ("Bronson A"[au] OR "Elephant CD"[au] OR "Horton FG"[au])
 
 ## Notes and features
 
