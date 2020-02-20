@@ -19,7 +19,9 @@ _Amy Voop, Brian C. Wândels, Dimitrii Xorxy_
 ...or...
 
 _Amy Voop_
+
 _Brian C. Wândels_
+
 _Dimitrii Xorxy_
 
 ...will generate the following links:
@@ -47,5 +49,7 @@ _Dimitrii Xorxy_
 ## Disclaimer
 
 This tool is not supported or endorsed by PubMed or NCBI. It is only intended for a real human (not a bot) to use to run reasonable amounts of search queries.
+
+## Screenshot
 
  ![Screenshot of tool](https://github.com/aaa2016/author-coi-checker/blob/master/screenshot.png)
